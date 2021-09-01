@@ -4,7 +4,7 @@ const Posts = require('./posts-model')
 const router = express.Router()
 
 router.get('/', (req, res) =>{
-    Posts.find()
+    Posts.find(req.query)
     .then(post =>{
         res.status(200).json(post)
     })
@@ -12,5 +12,73 @@ router.get('/', (req, res) =>{
         console.log(error)
         res.status(500).json({message: 'The posts information could not be retrieved'})
     })
+})
+
+router.get('/:id', (req, res) =>{
+    Posts.findById(req.params.id)
+    .then(post =>{
+        if (post){
+            res.status(200).json(post)
+        }else {
+            res.status(404).json({message: 'The post with the specified ID does not exist'})
+        }
+    })
+    .catch(error =>{
+        console.log(error)
+        res.status(500).json({message: 'The post information could not be retrieved'})
+    })
+})
+
+router.post('/', async (req, res) =>{
+    const { title, contents} = req.body
+    if(!title || !contents) {
+    res.status(400).json({message: 'Please provide title and contents for the post'})
+    }
+    else {
+        Posts.insert({title, contents})
+        .then( ({id}) => {
+           return Posts.findById(id)
+        })
+        .then(newPost =>{
+            res.status(201).json(newPost)
+        })
+        .catch(err => {
+           res.status(500).jason(err.message) 
+        })
+        
+    }
+})
+
+router.put('/:id', (req, res) =>{
+    const info = req.body
+    if(!info.title || !info.contents){
+        res.status(400).json({ message: 'Please provide title and contents for the post'})
+    } else {
+        Posts.findById(req.params.id)
+        .then(post =>{
+            if(!post) {
+                res.status(404).json({
+                    message: 'The post with the specified ID does not exist',
+                })
+            } else{
+                return Posts.update(req.params.id, info)
+            }
+        })
+        .then(data =>{
+            if(data) {
+                return Posts.findById(req.params.id)
+            }
+        })
+        .then(post =>{
+            res.json(post)
+        })
+        .catch(err => {
+            res.status(500).json({
+                message: 'The posts information could not be retrieved',
+                err: err.message,
+            })
+        })
+    }
+   
 })
 module.exports = router
